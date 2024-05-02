@@ -30,7 +30,7 @@ namespace BOT1.commands
             string propositionText = messageToRetrieve.Result.Content;
             Console.WriteLine("proposition \""+propositionText+"\" by user " + ctx.User);
 
-            Proposition proposition = new Proposition(Guid.NewGuid().ToString(), ctx.User.Username, propositionText);
+            Proposition proposition = new Proposition(Guid.NewGuid().ToString(), ctx.User.Username,ctx.User.Id ,propositionText);
 
             Debug.WriteLine("Proposition object created");
 

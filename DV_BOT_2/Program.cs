@@ -8,7 +8,6 @@ using Lavalink4NET.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using DV_BOT;
 using Newtonsoft.Json;
 using DV_BOT.config;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +18,13 @@ using BOT1.propositions;
 using BOT1.commands;
 using System.Diagnostics;
 using DSharpPlus.Interactivity.Extensions;
+using DV_BOT_2.commands;
+using DSharpPlus.VoiceNext;
+using Lavalink4NET;
+using Lavalink4NET.Events.Players;
+using DV_BOT_2;
+using DV_BOT_2.customEvents;
+using DSharpPlus.Entities;
 
 var builder = new HostApplicationBuilder(args);
 
@@ -41,26 +47,27 @@ builder.Services.AddSingleton(discordConfig);
 
 builder.Services.AddLavalink();
 
+//configure lavalink
 builder.Services.ConfigureLavalink(config => 
 {
-    config.BaseAddress = new Uri("https://lava-v4.ajieblogs.eu.org:443");
-    config.Passphrase = "https://dsc.gg/ajidevserver";
+    config.BaseAddress = new Uri("https://lavalink4.alfari.id:443");
+    config.Passphrase = "catfein";
+    config.ResumptionOptions = new LavalinkSessionResumptionOptions(TimeSpan.FromSeconds(10));
 });
-
-// Logging
-builder.Services.AddLogging(s => s.AddConsole().SetMinimumLevel(LogLevel.Debug));
 
 builder.Build().Run();
 
 public static class globalVariables
 {
-    private static Propositions propositions;
+    //globally accessible for ease of use. dont care didnt ask + ur bald
+    public static IServiceProvider serviceProviderGlobal;
+    public static IAudioService audioServiceGlobal;
+    public static DiscordClient discordClientGlobal;
+
+    public static ulong GuildID = 1194760267075178657;
+
+    private static Propositions propositions = new Propositions("propositions.json");
     public static Propositions Propositions { get => propositions; set=> propositions=value; }
-    static globalVariables()
-    {
-        Debug.WriteLine("global variables constructor called");
-        propositions = new Propositions("propositions.json");
-    }
 }
 
 file sealed class ApplicationHost : BackgroundService
@@ -72,14 +79,23 @@ file sealed class ApplicationHost : BackgroundService
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(discordClient);
 
+        //assign serviceProvider(containing e.g. audioservice) and discordClient
         _serviceProvider = serviceProvider;
         _discordClient = discordClient;
+
+        //add those to global variables because i couldnt be bothered to fuck with the arguments shits just public idc
+        globalVariables.serviceProviderGlobal = _serviceProvider;
+        globalVariables.audioServiceGlobal = (IAudioService)_serviceProvider.GetService(typeof(IAudioService));
+        globalVariables.discordClientGlobal = _discordClient;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        //get config (prefix+token)
         var jsonReader = new JSONReader();
         await jsonReader.ReadJSON();
+
+        //create config for !commands
         var commandsConfig = new CommandsNextConfiguration()
         {
             StringPrefixes = new string[] { jsonReader.Prefix },
@@ -88,16 +104,21 @@ file sealed class ApplicationHost : BackgroundService
             EnableDefaultHelp = false
         };
 
+        //enable interactivity, voicenext
         _discordClient.UseInteractivity();
+        _discordClient.UseVoiceNext();
 
+        //register /commands
         _discordClient
             .UseSlashCommands(new SlashCommandsConfiguration { Services = _serviceProvider })
-            .RegisterCommands<MusicCommands>(1194760267075178657); // Add guild id here
-        var Commands = _discordClient.UseCommandsNext(commandsConfig);
+            .RegisterCommands<SlashCommands>(globalVariables.GuildID); 
 
-        Commands.RegisterCommands<AdminCommands>();
-        Commands.RegisterCommands<InfoCommands>();
-        Commands.RegisterCommands<ResponseCommands>();
+        var prefixCommands = _discordClient.UseCommandsNext(commandsConfig);
+
+        //register all !commands
+        prefixCommands.RegisterCommands<AdminCommands>();
+        prefixCommands.RegisterCommands<InfoCommands>();
+        prefixCommands.RegisterCommands<ResponseCommands>();
 
         // connect to discord gateway and initialize node connection
         await _discordClient
@@ -106,28 +127,35 @@ file sealed class ApplicationHost : BackgroundService
 
         var readyTaskCompletionSource = new TaskCompletionSource();
 
-        
-
+        //event catching
         _discordClient.Ready += SetResult;
         await readyTaskCompletionSource.Task.ConfigureAwait(false);
         _discordClient.Ready -= SetResult;
-
         _discordClient.MessageCreated += MessageCreatedHandler;
+        globalVariables.audioServiceGlobal.TrackEnded += TrackEndedHandler;   
 
+        //loop app
         await Task
             .Delay(Timeout.InfiniteTimeSpan, stoppingToken)
             .ConfigureAwait(false);
+
+        //event handlers
         Task SetResult(DiscordClient client, ReadyEventArgs eventArgs)
         {
             readyTaskCompletionSource.TrySetResult();
             return Task.CompletedTask;
         }
-        Task MessageCreatedHandler(DiscordClient sender, MessageCreateEventArgs args)
+        Task MessageCreatedHandler(DiscordClient sender, MessageCreateEventArgs args)//public event AsyncEventHandler<DiscordClient, MessageCreateEventArgs> MessageCreated
         {
             if (args.Author != _discordClient.CurrentUser)
             {
-                sillyResponses.HandleWednesday(args);
+                handlingResponses.HandleWednesday(sender,args);
             }
+            return Task.CompletedTask;
+        }
+        Task TrackEndedHandler(object sender, TrackEndedEventArgs args) //event AsyncEventHandler<TrackEndedEventArgs>? TrackEnded;
+        {
+            args.Player.DisconnectAsync();
             return Task.CompletedTask;
         }
     }

@@ -1,4 +1,7 @@
-﻿using DSharpPlus.Entities;
+﻿using DSharpPlus.AsyncEvents;
+using DSharpPlus;
+using DSharpPlus.Entities;
+using DV_BOT_2.customEvents;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -6,6 +9,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Lavalink4NET.Events;
+using DV_BOT.messageHandlers;
 
 namespace BOT1.commands
 {
@@ -13,13 +18,13 @@ namespace BOT1.commands
     {
         private string propositionId;
         private string userProposing;
+        private ulong userProposingId;
         private string propositionText;
         private bool propositionSeen;
         private bool? propositionApproved = null;
         
         public string UserProposing { get => userProposing; }
         public string PropositionText { get => propositionText; }
-
         public JObject PropositionAsJObject
         {
             get
@@ -27,13 +32,13 @@ namespace BOT1.commands
                 JObject toReturn = new JObject();
                 toReturn.Add("propositionId",propositionId);
                 toReturn.Add("userProposing",userProposing);
+                toReturn.Add("userProposingId", userProposingId);
                 toReturn.Add("propositionText", propositionText);
                 toReturn.Add("propositionSeen", propositionSeen);
                 toReturn.Add("propositionApproved", propositionApproved);
                 return toReturn;
             }
         }
-
         public bool PropositionSeen
         {
             get => propositionSeen;
@@ -44,6 +49,16 @@ namespace BOT1.commands
             get=>propositionApproved;
             set
             {
+
+                if (value != null && globalVariables.discordClientGlobal != null)
+                {
+                    PropositionEventArgs args = new PropositionEventArgs((bool)value, propositionText, userProposingId);
+                    handlingResponses.HandlePropositionDecision(this,args);
+                }
+                else
+                {
+                    Console.WriteLine("handler null. what!");
+                }
                 if (value == false)
                 {
                     Console.WriteLine("Proposition denied, deleting");
@@ -52,21 +67,22 @@ namespace BOT1.commands
                 else { propositionApproved = value; }
             }
         }
-
-        public Proposition(string propositionId, string userProposing, string propositionText) 
+        public Proposition(string propositionId, string userProposing, ulong  userProposingId, string propositionText) 
         {
             Console.WriteLine("Creating proposition object");
             this.propositionId = propositionId;
             this.userProposing= userProposing;
+            this.userProposingId = userProposingId;
             this.propositionText = propositionText;
             this.propositionSeen = false;
-            this.propositionApproved = false;
+            this.propositionApproved = null;
         }
 
         public Proposition(JObject proposition)
         {
             this.propositionId = proposition["propositionId"].ToString();
             this.userProposing = proposition["userProposing"].ToString();
+            this.userProposingId = (ulong)proposition["userProposingId"];
             this.propositionText = proposition["propositionText"].ToString();
             this.propositionSeen = Convert.ToBoolean(proposition["propositionSeen"].ToString());
             this.propositionApproved = Convert.ToBoolean(proposition["propositionApproved"].ToString());
@@ -92,5 +108,10 @@ namespace BOT1.commands
             return this.userProposing + " proposed :\n" + this.propositionText;
         }
 
+
+
+
+       
     }
 }
+    

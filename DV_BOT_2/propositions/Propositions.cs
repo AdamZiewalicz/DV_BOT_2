@@ -7,8 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BOT1.commands;
+using DSharpPlus.AsyncEvents;
+using DSharpPlus.EventArgs;
+using DSharpPlus;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using DV_BOT_2.customEvents;
 
 namespace BOT1.propositions
 {
@@ -16,10 +20,8 @@ namespace BOT1.propositions
     {
         private List<Proposition> propositions = new List<Proposition>();
         private string propositionsFilePath;
-
         public List<Proposition> PropositionsAsProperty { get => propositions; set => propositions = value; }
         public int Count { get => propositions.Count; }
-
         public void AddProposition(Proposition proposition)
         {
             propositions.Add(proposition);
