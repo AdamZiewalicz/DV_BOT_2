@@ -5,6 +5,8 @@ using DSharpPlus.Exceptions;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
 using DV_BOT_2.customEvents;
+using OpenAI_API.Chat;
+using OpenAI_API.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +17,32 @@ namespace BOT1.commands
 {
     public class AdminCommands : BaseCommandModule
     {
+
+        [Command("gpt")]
+        public async Task GPT(CommandContext ctx, [RemainingText] string text)
+        {
+            try
+            {
+                var member = ctx.Member;
+                Conversation chat;
+
+                Console.WriteLine("Member is " + member.Username);
+
+                if(!globalVariables.CurrentMembers.IsConversation(member))
+                {
+                    var conversation = globalVariables.api.Chat.CreateConversation();
+                    chat = globalVariables.CurrentMembers.TryAddConversation(member,conversation);
+                }
+                else { chat = globalVariables.CurrentMembers.GetConversation(member); }
+
+                chat.Model = Model.ChatGPTTurbo;
+                chat.AppendUserInput(text);
+                var result = await chat.GetResponseFromChatbotAsync();
+                Console.WriteLine(result);
+                await ctx.Channel.SendMessageAsync(result.ToString());
+            }
+            catch(Exception ex) { Console.WriteLine(ex.Message); }
+        }
         [Command("SeePropositions")]
         public async Task SeePropositions(CommandContext ctx)
         {

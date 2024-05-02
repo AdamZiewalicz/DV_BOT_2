@@ -12,6 +12,7 @@ namespace DV_BOT.config
     {
         public string Token { get; set; }
         public string Prefix { get; set; }
+        public string GPTSecret { get; set; }
 
         public async Task ReadJSON()
         {
@@ -22,6 +23,7 @@ namespace DV_BOT.config
 
                 this.Token = data.Token;
                 this.Prefix = data.Prefix;
+                this.GPTSecret = data.GPTSecret;
             }
         }
     }
@@ -30,5 +32,6 @@ namespace DV_BOT.config
     {
         public string Token { get; set; }
         public string Prefix { get; set; }
+        public string GPTSecret { get; set; }
     }
 }

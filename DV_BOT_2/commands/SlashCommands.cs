@@ -83,6 +83,35 @@ namespace DV_BOT_2.commands
             }
         }
 
+        [SlashCommand("skip",description:"Skips the current track")]
+        public async Task Skip(InteractionContext ctx)
+        {
+            await ctx.DeferAsync().ConfigureAwait(false);
+            var player = await GetPlayerAsync(ctx, connectToVoiceChannel: true).ConfigureAwait(false);
+            await player.SkipAsync(1).ConfigureAwait(false);
+            await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Skipping track..."));
+        }
+        [SlashCommand("Pause", description: "Pauses/unpauses the current track")]
+        public async Task Pause(InteractionContext ctx)
+        {
+            await ctx.DeferAsync().ConfigureAwait(false);
+            var player = await GetPlayerAsync(ctx, connectToVoiceChannel: true).ConfigureAwait(false);
+
+            if(player==null || player.State == PlayerState.NotPlaying)
+            {
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("No track is playing/paused"));
+                return;
+            }
+            if(player.IsPaused)
+            {
+                await player.ResumeAsync();
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Track resumed."));
+                return;
+            }
+            await player.PauseAsync();
+            await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Track paused."));
+        }
+
         [SlashCommand("stop", description: "Stops current track")]
         public async Task Stop(InteractionContext ctx)
         {

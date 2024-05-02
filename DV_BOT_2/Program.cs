@@ -25,6 +25,8 @@ using Lavalink4NET.Events.Players;
 using DV_BOT_2;
 using DV_BOT_2.customEvents;
 using DSharpPlus.Entities;
+using OpenAI_API;
+using System.Dynamic;
 
 var builder = new HostApplicationBuilder(args);
 
@@ -39,6 +41,7 @@ var discordConfig = new DiscordConfiguration()
     AutoReconnect = true,
 };
 
+globalVariables.api = new OpenAIAPI(jsonReader.GPTSecret);
 
 // DSharpPlus
 builder.Services.AddHostedService<ApplicationHost>();
@@ -60,6 +63,10 @@ builder.Build().Run();
 public static class globalVariables
 {
     //globally accessible for ease of use. dont care didnt ask + ur bald
+    public static OpenAIAPI api;
+
+    public static Members CurrentMembers;
+
     public static IServiceProvider serviceProviderGlobal;
     public static IAudioService audioServiceGlobal;
     public static DiscordClient discordClientGlobal;
@@ -87,6 +94,8 @@ file sealed class ApplicationHost : BackgroundService
         globalVariables.serviceProviderGlobal = _serviceProvider;
         globalVariables.audioServiceGlobal = (IAudioService)_serviceProvider.GetService(typeof(IAudioService));
         globalVariables.discordClientGlobal = _discordClient;
+        globalVariables.CurrentMembers = new Members();
+        Console.WriteLine(globalVariables.CurrentMembers.ToString());
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -145,7 +154,7 @@ file sealed class ApplicationHost : BackgroundService
             readyTaskCompletionSource.TrySetResult();
             return Task.CompletedTask;
         }
-        Task MessageCreatedHandler(DiscordClient sender, MessageCreateEventArgs args)//public event AsyncEventHandler<DiscordClient, MessageCreateEventArgs> MessageCreated
+        Task MessageCreatedHandler(DiscordClient sender, MessageCreateEventArgs args)
         {
             if (args.Author != _discordClient.CurrentUser)
             {
@@ -155,7 +164,8 @@ file sealed class ApplicationHost : BackgroundService
         }
         Task TrackEndedHandler(object sender, TrackEndedEventArgs args) //event AsyncEventHandler<TrackEndedEventArgs>? TrackEnded;
         {
-            args.Player.DisconnectAsync();
+            if (args.Player.State == Lavalink4NET.Players.PlayerState.NotPlaying)
+            { args.Player.DisconnectAsync(); }
             return Task.CompletedTask;
         }
     }
