@@ -26,8 +26,6 @@ namespace BOT1.commands
                 var member = ctx.Member;
                 Conversation chat;
 
-                Console.WriteLine("Member is " + member.Username);
-
                 if(!globalVariables.CurrentMembers.IsConversation(member))
                 {
                     var conversation = globalVariables.api.Chat.CreateConversation();
@@ -35,13 +33,27 @@ namespace BOT1.commands
                 }
                 else { chat = globalVariables.CurrentMembers.GetConversation(member); }
 
-                chat.Model = Model.ChatGPTTurbo;
+                //chat.Model = Model.ChatGPTTurbo;
+                chat.Model = Model.GPT4_Turbo;
+                chat.AppendUserInput("Provide a response to this message in under 2000 characters: ");
                 chat.AppendUserInput(text);
                 var result = await chat.GetResponseFromChatbotAsync();
-                Console.WriteLine(result);
-                await ctx.Channel.SendMessageAsync(result.ToString());
+                string toSend = result.ToString();
+                if (toSend.Length > 2000)
+                {
+                    string currentMessage = "";
+                    int idx = 0;
+                    while (currentMessage.Length > 2000)
+                    {
+                        currentMessage = toSend.Substring(idx, 2000);
+                        await ctx.Channel.SendMessageAsync(currentMessage);
+                        idx += 2000;
+                    }
+                }
+                else
+                { await ctx.Channel.SendMessageAsync(toSend); }
             }
-            catch(Exception ex) { Console.WriteLine(ex.Message); }
+            catch(Exception ex) { await ctx.Channel.SendMessageAsync("We found a problem executing the action. Sowwy!"); Console.WriteLine(ex.Message); }
         }
         [Command("SeePropositions")]
         public async Task SeePropositions(CommandContext ctx)

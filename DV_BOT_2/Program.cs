@@ -158,7 +158,7 @@ file sealed class ApplicationHost : BackgroundService
         {
             if (args.Author != _discordClient.CurrentUser)
             {
-                handlingResponses.HandleWednesday(sender,args);
+                handlingResponses.HandleMessage(sender,args);
             }
             return Task.CompletedTask;
         }

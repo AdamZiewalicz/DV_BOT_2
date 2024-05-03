@@ -33,11 +33,11 @@ namespace DV_BOT.messageHandlers
             return true;
 
         }
-        public static async void HandleWednesday(DiscordClient sender, MessageCreateEventArgs args)
+        public static async void HandleMessage(DiscordClient sender, MessageCreateEventArgs args)
         {
             string lowerCaseMessage = args.Message.Content.ToLower();
 
-            Console.WriteLine(lowerCaseMessage);
+            Console.WriteLine("[User "+args.Message.Author.Username+" at "+args.Message.CreationTimestamp.ToString()+"]\n\r"+args.Message.Content.ToLower()+"\n");
 
             if (args.Message.ToString().ToLower().Contains("wednesday"))
             {

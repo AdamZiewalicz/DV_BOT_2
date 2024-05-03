@@ -21,6 +21,13 @@ using Concentus;
 using Concentus.Enums;
 using System.Threading;
 using System.Globalization;
+using OpenAI_API.Models;
+using OpenAI_API.Audio;
+using Lavalink4NET.Clients;
+using OpenAI_API.Images;
+using DSharpPlus.Interactivity.Extensions;
+using System.Reflection.Emit;
+using System.Linq.Expressions;
 
 
 namespace DV_BOT_2.commands
@@ -34,6 +41,186 @@ namespace DV_BOT_2.commands
             ArgumentNullException.ThrowIfNull(audioService);
 
             _audioService = audioService;
+        }
+        [SlashCommand("GPTPhoto2", description: "GPTPhoto but better")]
+        public async Task GPTPhoto2(InteractionContext ctx, [Option("query", "Query for photo")] string text)
+        { try {
+                await ctx.DeferAsync().ConfigureAwait(false);
+                var m1 = new DiscordFollowupMessageBuilder().WithContent("Creating picture from prompt \"" + text + "\"");
+                await ctx.FollowUpAsync(m1);
+
+                var chatGPT4 = globalVariables.api.Chat.CreateConversation();
+                chatGPT4.Model = Model.GPT4_Turbo;
+                chatGPT4.AppendUserInput("Create a DALLE3 prompt that's as detailed as possible. Make sure the message is just and only" +
+                    "the prompt with no additional input from your side and no quotation marks. make the prompt based on the following: ");
+                chatGPT4.AppendUserInput(text);
+                var result = await chatGPT4.GetResponseFromChatbotAsync();
+
+                string response = result.ToString();
+
+                Console.WriteLine(response);
+
+                var request = new ImageGenerationRequest()
+                {
+                    Prompt = response,
+                    Model = Model.DALLE3,
+                    Size = ImageSize._1024,
+                    ResponseFormat = ImageResponseFormat.Url
+                };
+
+                var picture = await globalVariables.api.ImageGenerations.CreateImageAsync(request);
+
+                if (picture.Created == null)
+                {
+                    Console.WriteLine("Didnt create?");
+                }
+                var message = new DiscordEmbedBuilder();
+                message.WithTitle("Your picture: ");
+                message.WithImageUrl(picture.ToString());
+
+                var interactivity = ctx.Client.GetInteractivity();
+
+                await ctx.Channel.SendMessageAsync(embed: message);
+                bool makeMore = true;
+                string newPrompt;
+                while (makeMore)
+                {
+                    await ctx.Channel.SendMessageAsync("If youre not satisfied, say " +
+                    "what you'd like to change in the previous prompt. If satisfied, say \"enough\"");
+
+                    var nextMessage = await interactivity.WaitForMessageAsync(message => message.Author.Username == ctx.Member.Username, TimeSpan.FromMinutes(3));
+                    if(nextMessage.TimedOut)
+                    {
+                        await ctx.Channel.SendMessageAsync("Request timed out.");
+                        break;
+                    }
+                    if (nextMessage.Result.Content.Contains("enough"))
+                    {
+                        await ctx.Channel.SendMessageAsync("Enough is enough then :)");
+                        break;
+                    }else
+                    {
+                        await ctx.Channel.SendMessageAsync("Creating new...");
+                        newPrompt = "Give me the same as before, but this time also " + nextMessage.Result.Content.Substring(7);
+                        chatGPT4.AppendUserInput(newPrompt);
+                        var nextResult = await chatGPT4.GetResponseFromChatbotAsync();
+                        Console.WriteLine("\nNew Prompt ["+DateTime.Now.ToString()+"]\n\n"+nextResult.ToString()+"\n\n");
+                        var nextRequest = new ImageGenerationRequest()
+                        {
+                            Prompt = nextResult.ToString(),
+                            Model = Model.DALLE3,
+                            Size = ImageSize._1024,
+                            ResponseFormat = ImageResponseFormat.Url
+                        };
+                        ImageResult newPicture;
+                        try
+                        { newPicture = await globalVariables.api.ImageGenerations.CreateImageAsync(nextRequest); }
+                        catch(Exception e)
+                        {
+                            newPicture = null;
+                            await ctx.Channel.SendMessageAsync("Failed to create message. Add some info or say enough: "+e.Message); 
+                        }
+                        var newMessage = new DiscordEmbedBuilder();
+                        newMessage.WithTitle("Your picture: ");
+                        if (newPicture != null)
+                        { newMessage.WithImageUrl(newPicture.ToString()); }
+                        await ctx.Channel.SendMessageAsync(embed: newMessage);
+                    }
+
+                }
+
+
+            } catch (Exception ex) { Console.WriteLine("error in gptphoto2 " + ex.Message);
+                await ctx.Channel.SendMessageAsync(new DiscordMessageBuilder().WithContent("Failed to create"));
+            } }
+
+
+        [SlashCommand("GPTphoto",description:"create photo from prompt")]
+        public async Task GPTphoto(InteractionContext ctx ,[Option("text","Text to create photo with")]string text)
+        {
+            try{
+                await ctx.DeferAsync().ConfigureAwait(false);
+
+                var request = new ImageGenerationRequest()
+                {
+                    Prompt = text,
+                    Model = Model.DALLE3,
+                    Size = ImageSize._1024,
+                    ResponseFormat = ImageResponseFormat.Url
+                };
+
+                var picture = await globalVariables.api.ImageGenerations.CreateImageAsync(request);
+
+                if (picture.Created == null)
+                {
+                    Console.WriteLine("Didnt create?");
+                }
+                var message = new DiscordEmbedBuilder();
+                message.WithTitle("Your picture: ");
+                message.WithImageUrl(picture.ToString());
+
+                var m1 = new DiscordFollowupMessageBuilder().WithContent("Creating picture from prompt \"" + text + "\"");
+
+                await ctx.FollowUpAsync(m1);
+                await ctx.Channel.SendMessageAsync(embed: message);
+            }catch(Exception ex) { Console.WriteLine(ex.Message); } 
+        }
+
+        [SlashCommand("GPTTTS",description:"play TTS with GPT")]
+        public async Task GPTTTS(InteractionContext ctx, [Option("text","Text to play")]string text)
+        {
+            await ctx.DeferAsync().ConfigureAwait(false);
+
+            try
+            {
+                var player = await GetPlayerAsync(ctx, connectToVoiceChannel: false).ConfigureAwait(false);
+                if (player != null) { await player.DisconnectAsync(); }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            var connection = await ctx.Member.VoiceState.Channel.ConnectAsync();
+            //got connection
+
+            try
+            {
+                if (ctx.Member.VoiceState == null)
+                {
+                    await ctx.Channel.SendMessageAsync("User not in voice");
+                    return;
+                }
+                var transmit = connection.GetTransmitSink();
+
+                var request = new TextToSpeechRequest()
+                {
+                    Input = text,
+                    Model = Model.TTS_HD,
+                    ResponseFormat = TextToSpeechRequest.ResponseFormats.MP3,
+                    Speed = 1,
+                    Voice = TextToSpeechRequest.Voices.Echo
+                };
+                string filename = DateTime.Now.Ticks.ToString()+".mp3";
+
+                await globalVariables.api.TextToSpeech.SaveSpeechToFileAsync(request, filename);
+
+                Stream stream = ConvertAudioToPcm(filename);
+
+                transmit.VolumeModifier = 1;
+
+                await stream.CopyToAsync(transmit);
+
+                File.Delete(filename);
+            }
+            catch (Exception e) { Console.WriteLine(e.Message + "\n" + e.StackTrace); }
+
+
+
+            await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Playing " + text));
+            connection.Disconnect();
+            return;
         }
 
         [SlashCommand("play", description: "Plays music")]
