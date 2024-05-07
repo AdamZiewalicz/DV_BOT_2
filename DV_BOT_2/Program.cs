@@ -27,6 +27,7 @@ using DV_BOT_2.customEvents;
 using DSharpPlus.Entities;
 using OpenAI_API;
 using System.Dynamic;
+using FakeYouNet;
 
 var builder = new HostApplicationBuilder(args);
 
@@ -58,12 +59,14 @@ builder.Services.ConfigureLavalink(config =>
     config.ResumptionOptions = new LavalinkSessionResumptionOptions(TimeSpan.FromSeconds(10));
 });
 
+
 builder.Build().Run();
 
 public static class globalVariables
 {
     //globally accessible for ease of use. dont care didnt ask + ur bald
     public static OpenAIAPI api;
+    public static Client FakeYouClient = new FakeYouNet.Client();
 
     public static Members CurrentMembers;
 
@@ -154,13 +157,23 @@ file sealed class ApplicationHost : BackgroundService
             readyTaskCompletionSource.TrySetResult();
             return Task.CompletedTask;
         }
-        Task MessageCreatedHandler(DiscordClient sender, MessageCreateEventArgs args)
+        async Task MessageCreatedHandler(DiscordClient sender, MessageCreateEventArgs args)
         {
+            
             if (args.Author != _discordClient.CurrentUser)
             {
-                handlingResponses.HandleMessage(sender,args);
+                if (args.Channel.Id == 1236330446380466216)
+                {
+                    if (args.Message.Content.ToLower().Contains("stwórz") || args.Message.Content.ToLower().Contains("stworz"))
+                    {
+                        MiscMethods current = new MiscMethods(globalVariables.audioServiceGlobal, sender);
+                        await current.GPTPhoto2(sender, args.Message.Author, args.Message.Content, args.Channel);
+                    }
+                }
+                await handlingResponses.HandleMessage(sender,args);
             }
-            return Task.CompletedTask;
+
+            return;
         }
         Task TrackEndedHandler(object sender, TrackEndedEventArgs args) //event AsyncEventHandler<TrackEndedEventArgs>? TrackEnded;
         {

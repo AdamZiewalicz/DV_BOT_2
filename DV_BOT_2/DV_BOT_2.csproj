@@ -15,6 +15,7 @@
     <PackageReference Include="DSharpPlus.Interactivity" Version="4.4.6" />
     <PackageReference Include="DSharpPlus.SlashCommands" Version="4.4.6" />
     <PackageReference Include="DSharpPlus.VoiceNext" Version="4.4.6" />
+    <PackageReference Include="FakeYouNet" Version="1.0.0" />
     <PackageReference Include="Lavalink4NET.DSharpPlus" Version="4.0.18" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageReference Include="NAudio" Version="2.2.1" />

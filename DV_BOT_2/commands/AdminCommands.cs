@@ -35,17 +35,18 @@ namespace BOT1.commands
 
                 //chat.Model = Model.ChatGPTTurbo;
                 chat.Model = Model.GPT4_Turbo;
-                chat.AppendUserInput("Provide a response to this message in under 2000 characters: ");
                 chat.AppendUserInput(text);
                 var result = await chat.GetResponseFromChatbotAsync();
                 string toSend = result.ToString();
                 if (toSend.Length > 2000)
                 {
-                    string currentMessage = "";
+                    string currentMessage = toSend;
                     int idx = 0;
-                    while (currentMessage.Length > 2000)
+                    while (toSend.Length >= idx)
                     {
-                        currentMessage = toSend.Substring(idx, 2000);
+                        if (toSend.Length >= idx + 2000)
+                        { currentMessage = toSend.Substring(idx, 2000); }
+                        else { currentMessage = toSend.Substring(idx); }
                         await ctx.Channel.SendMessageAsync(currentMessage);
                         idx += 2000;
                     }
@@ -53,7 +54,7 @@ namespace BOT1.commands
                 else
                 { await ctx.Channel.SendMessageAsync(toSend); }
             }
-            catch(Exception ex) { await ctx.Channel.SendMessageAsync("We found a problem executing the action. Sowwy!"); Console.WriteLine(ex.Message); }
+            catch(Exception ex) { Console.WriteLine(ex.Message); await ctx.Channel.SendMessageAsync("We found a problem executing the action. Sorry!");  }
         }
         [Command("SeePropositions")]
         public async Task SeePropositions(CommandContext ctx)

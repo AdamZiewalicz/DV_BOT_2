@@ -12,6 +12,7 @@ using DSharpPlus.SlashCommands;
 using Lavalink4NET;
 using BOT1.commands;
 using DV_BOT_2.customEvents;
+using DSharpPlus.Entities;
 
 namespace DV_BOT.messageHandlers
 {
@@ -33,7 +34,7 @@ namespace DV_BOT.messageHandlers
             return true;
 
         }
-        public static async void HandleMessage(DiscordClient sender, MessageCreateEventArgs args)
+        public static async Task<Task> HandleMessage(DiscordClient sender, MessageCreateEventArgs args)
         {
             string lowerCaseMessage = args.Message.Content.ToLower();
 
@@ -50,7 +51,7 @@ namespace DV_BOT.messageHandlers
                         { messageToSend += $"{args.Author.Username} you shall be struck down when you least expect it"; }
                         else//and its not wednesday. youre an idiot
                         { 
-                            messageToSend += $"It does NOT feel like a wednesday. You're an idiot {args.Author.Username}";
+                            messageToSend += $"It does NOT feel like a wednesday. You're an idiot {((DiscordMember)args.Author).Nickname}";
 
                             IAudioService audioService = (IAudioService)globalVariables.serviceProviderGlobal.GetService(typeof(IAudioService));
 
@@ -60,7 +61,7 @@ namespace DV_BOT.messageHandlers
                         }
 
                         await args.Channel.SendMessageAsync(messageToSend);
-                        return;
+                        return Task.CompletedTask;
                     }
                     else
                     {
@@ -72,10 +73,11 @@ namespace DV_BOT.messageHandlers
                         { messageToSend += ". Maybe because it isn't."; }
 
                         await args.Channel.SendMessageAsync(messageToSend);
-                        return;
+                        return Task.CompletedTask;
                     }
                 }
             }
+            return Task.CompletedTask;
         }   
         public static async void HandlePropositionDecision(Proposition sender, PropositionEventArgs args)
         {

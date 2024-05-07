@@ -28,6 +28,8 @@ using OpenAI_API.Images;
 using DSharpPlus.Interactivity.Extensions;
 using System.Reflection.Emit;
 using System.Linq.Expressions;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 
 namespace DV_BOT_2.commands
@@ -393,6 +395,148 @@ namespace DV_BOT_2.commands
             return;
 
         }
+        [SlashCommand("FakeYouTTS", description: "Play TTS message")]
+         public async Task FakeYouTTS(InteractionContext ctx, [Option("Message", "Message to play")] string message)
+         {
+             await ctx.DeferAsync().ConfigureAwait(false);
+
+             try
+             {
+                 var player = await GetPlayerAsync(ctx, connectToVoiceChannel: false).ConfigureAwait(false);
+                 if (player != null) { await player.DisconnectAsync(); }
+
+             }
+             catch (Exception ex)
+             {
+                 Console.WriteLine(ex.Message);
+             }
+
+             var connection = await ctx.Member.VoiceState.Channel.ConnectAsync();
+             //connected 
+
+             try
+             {
+                 if (ctx.Member.VoiceState == null)
+                 {
+                     await ctx.Channel.SendMessageAsync("User not in voice");
+                     return;
+                 }
+                 var transmit = connection.GetTransmitSink();
+
+                 //got transmission sink
+
+                 var voice = await globalVariables.FakeYouClient.FindVoiceByTitle("Mario (Charles Martinet, 1994-2023) (New!)");
+                 //var voice = await globalVariables.FakeYouClient.FindVoiceByToken("weight_tjwh5xfmyk1c7p3kh3fapmcjt");
+
+                 string filename = DateTime.Now.Ticks.ToString() + ".wav";
+
+                Console.WriteLine("Getting FakeYou tts...");
+                await globalVariables.FakeYouClient.DownloadMakeTTS(voice, message, filename);
+                Console.WriteLine("Got tts.");
+                 while (!File.Exists(filename))
+                 {
+                     Thread.Sleep(100);
+                 }
+                 Stream stream = ConvertAudioToPcm(filename);
+
+                 await stream.CopyToAsync(transmit);
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Playing " + message));
+                await stream.DisposeAsync();
+
+                 connection.Disconnect();
+                // File.Delete(filename);
+             }
+             catch (Exception e) { Console.WriteLine(e.Message + "\n" + e.StackTrace); }
+
+
+
+             
+
+             return;
+
+         }
+        /*
+        [SlashCommand("FakeYouVoices",description:"Gets list of voice titles")]
+        public async Task FakeYouVoices(InteractionContext ctx)
+        {
+            await ctx.DeferAsync().ConfigureAwait(false);
+            try
+            {
+                StreamReader sr = new StreamReader("fakeYouVoices.json");
+                sr.ReadToEnd();
+                Console.WriteLine(sr.ToString().Substring(0, 20));
+                JObject voicesAsJObject = JsonConvert.DeserializeObject(sr.ToString()) as JObject;
+                sr.Close();
+                Console.WriteLine("Read voices");
+                JArray Models = voicesAsJObject["models"] as JArray;
+                Console.WriteLine("Got models");
+                await ctx.Channel.SendMessageAsync("Models: ");
+                foreach (var model in Models)
+                {
+                    await ctx.Channel.SendMessageAsync(new DiscordMessageBuilder().WithContent(model["title"].ToString()));
+                }
+            }catch(Exception ex) { Console.WriteLine(ex.Message); }
+            await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("^"));
+        }
+        [SlashCommand("FakeYouTTS", description: "Choose voice for tts")]
+        public async Task FakeYouTTS(InteractionContext ctx, [Option("Message", "Message to play")] string message, [Option("voice", "voice to choose")] string voiceToPlay)
+        {
+            await ctx.DeferAsync().ConfigureAwait(false);
+
+            try
+            {
+                var player = await GetPlayerAsync(ctx, connectToVoiceChannel: false).ConfigureAwait(false);
+                if (player != null) { await player.DisconnectAsync(); }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            var connection = await ctx.Member.VoiceState.Channel.ConnectAsync();
+            //connected 
+
+            try
+            {
+                if (ctx.Member.VoiceState == null)
+                {
+                    await ctx.Channel.SendMessageAsync("User not in voice");
+                    return;
+                }
+                var transmit = connection.GetTransmitSink();
+
+                //got transmission sink
+
+                var voice = await globalVariables.FakeYouClient.FindVoiceByTitle("voiceToPlay");
+                //var voice = await globalVariables.FakeYouClient.FindVoiceByToken("weight_tjwh5xfmyk1c7p3kh3fapmcjt");
+
+                string filename = DateTime.Now.Ticks.ToString() + ".wav";
+
+                await globalVariables.FakeYouClient.DownloadMakeTTS(voice, message, filename);
+
+                while (!File.Exists(filename))
+                {
+                    Thread.Sleep(100);
+                }
+                Stream stream = ConvertAudioToPcm(filename);
+
+                await stream.CopyToAsync(transmit);
+                Thread.Sleep(1000);
+                await stream.DisposeAsync();
+
+                connection.Disconnect();
+                File.Delete(filename);
+            }
+            catch (Exception e) { Console.WriteLine(e.Message + "\n" + e.StackTrace); }
+
+
+
+            await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Playing " + message));
+
+            return;
+
+        }*/
         private Stream ConvertAudioToPcm(string filePath)
         {
             var ffmpeg = Process.Start(new ProcessStartInfo
