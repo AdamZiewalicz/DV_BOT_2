@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "DV_BOT_2": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DV_BOT_2
+namespace DV_BOT_2.guildInfo
 {
     public class Member
     {
@@ -16,7 +16,7 @@ namespace DV_BOT_2
         public Member(DiscordMember userAsDMember)
         {
             this.userAsDMember = userAsDMember;
-            this.conversation = null;
+            conversation = null;
         }
     }
 }

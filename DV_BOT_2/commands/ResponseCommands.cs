@@ -11,8 +11,9 @@ using DV_BOT;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic;
+using DV_BOT_2.propositions;
 
-namespace BOT1.commands
+namespace DV_BOT_2.commands
 {
     public class ResponseCommands : BaseCommandModule
     {
@@ -30,11 +31,11 @@ namespace BOT1.commands
             string propositionText = messageToRetrieve.Result.Content;
             Console.WriteLine("proposition \""+propositionText+"\" by user " + ctx.User);
 
-            Proposition proposition = new Proposition(Guid.NewGuid().ToString(), ctx.User.Username,ctx.User.Id ,propositionText);
+            Proposition proposition = new(Guid.NewGuid().ToString(), ctx.User.Username,ctx.User.Id ,propositionText,ctx.Guild.Id);
 
             Debug.WriteLine("Proposition object created");
 
-            globalVariables.Propositions.AddProposition(proposition);
+            // globalVariables.Propositions.AddProposition(proposition);
 
             await ctx.Channel.SendMessageAsync("Proposition noted");
         }

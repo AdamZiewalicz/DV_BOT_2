@@ -6,19 +6,17 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BOT1.commands;
 using DSharpPlus.AsyncEvents;
 using DSharpPlus.EventArgs;
 using DSharpPlus;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using DV_BOT_2.customEvents;
 
-namespace BOT1.propositions
+namespace DV_BOT_2.propositions
 {
     public class Propositions
     {
-        private List<Proposition> propositions = new List<Proposition>();
+        private List<Proposition> propositions = [];
         private string propositionsFilePath;
         public List<Proposition> PropositionsAsProperty { get => propositions; set => propositions = value; }
         public int Count { get => propositions.Count; }
@@ -37,57 +35,29 @@ namespace BOT1.propositions
 
             this.propositionsFilePath = propositionsFilePath;
 
-            StreamReader sr = new StreamReader(propositionsFilePath);
+            StreamReader sr = new(propositionsFilePath);
 
             string propositionsFileContents = sr.ReadToEnd().ToString();
 
             Console.WriteLine(propositionsFileContents);
-       
+
             sr.Close();
-
-            JArray propositionsAsJArray;
-
-            if (propositionsFileContents != "" && propositionsFileContents!=null)
-            {
-                
-                try
-                { 
-                    propositionsAsJArray = JsonConvert.DeserializeObject(propositionsFileContents) as JArray;
-                    foreach (JObject proposition in propositionsAsJArray)
-                    {
-                        propositions.Add(new Proposition(proposition));
-                    }
-                }
-                catch (Exception e) 
-                {
-                    Console.WriteLine("Error initializing propositions file");
-                    Console.WriteLine(e.ToString());
-                    propositionsAsJArray = new JArray(); 
-                }
-
-            }
-            else { propositionsAsJArray = new JArray(); }
-
         }
         public void BackUpData()
         {
 
             Console.WriteLine("Backing up propositions...");
 
-            JArray PropositionsAsJArray = new JArray();
-
-            string PropositionsAsJArrayAsString = "";
+            JArray PropositionsAsJArray = [];
 
             foreach (Proposition proposition in propositions)
             {
-                PropositionsAsJArray.Add(proposition.PropositionAsJObject);
+                PropositionsAsJArray.Add((JObject)proposition);
             }
 
-            PropositionsAsJArrayAsString = PropositionsAsJArray.ToString();
+            StreamWriter sw = new(propositionsFilePath);
 
-            StreamWriter sw = new StreamWriter(propositionsFilePath);
-
-            sw.Write(PropositionsAsJArrayAsString);
+            sw.Write(PropositionsAsJArray.ToString());
 
             sw.Close();
 
@@ -99,7 +69,7 @@ namespace BOT1.propositions
         }
         public override string ToString()
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
             sb.AppendLine("Propositions: ");
 
             foreach(Proposition proposition in propositions)

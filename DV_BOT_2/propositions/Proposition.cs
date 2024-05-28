@@ -1,7 +1,6 @@
 ﻿using DSharpPlus.AsyncEvents;
 using DSharpPlus;
 using DSharpPlus.Entities;
-using DV_BOT_2.customEvents;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -11,93 +10,60 @@ using System.Text;
 using System.Threading.Tasks;
 using Lavalink4NET.Events;
 using DV_BOT.messageHandlers;
+using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using System.Numerics;
 
-namespace BOT1.commands
+
+namespace DV_BOT_2.propositions
 {
     public class Proposition : IComparable<Proposition>
     {
-        private string propositionId;
-        private string userProposing;
-        private ulong userProposingId;
-        private string propositionText;
-        private bool propositionSeen;
-        private bool? propositionApproved = null;
-        
-        public string UserProposing { get => userProposing; }
-        public string PropositionText { get => propositionText; }
-        public JObject PropositionAsJObject
-        {
-            get
-            {
-                JObject toReturn = new JObject();
-                toReturn.Add("propositionId",propositionId);
-                toReturn.Add("userProposing",userProposing);
-                toReturn.Add("userProposingId", userProposingId);
-                toReturn.Add("propositionText", propositionText);
-                toReturn.Add("propositionSeen", propositionSeen);
-                toReturn.Add("propositionApproved", propositionApproved);
-                return toReturn;
-            }
-        }
-        public bool PropositionSeen
-        {
-            get => propositionSeen;
-            set => propositionSeen = value;
-        }
-        public bool? PropositionApproved
-        {
-            get=>propositionApproved;
-            set
-            {
+        public string PropositionId { get; set; }
+        public ulong UserProposingId { get; set; }
+        public bool PropositionSeen { get; set; }
+        public bool? PropositionApproved { get; set; }
+        public ulong GuildId {  get; set; }
 
-                if (value != null && globalVariables.discordClientGlobal != null)
+        public string UserProposing { get; set; }
+        public string PropositionText { get; set; }
+
+        public static explicit operator JObject(Proposition proposition)
+        {
+                JObject toReturn = new()
                 {
-                    PropositionEventArgs args = new PropositionEventArgs((bool)value, propositionText, userProposingId);
-                    handlingResponses.HandlePropositionDecision(this,args);
-                }
-                else
-                {
-                    Console.WriteLine("handler null. what!");
-                }
-                if (value == false)
-                {
-                    Console.WriteLine("Proposition denied, deleting");
-                    globalVariables.Propositions.DeleteProposition(this);
-                }
-                else { propositionApproved = value; }
-            }
+                    { "propositionId", proposition.PropositionId },
+                    { "userProposing", proposition.UserProposing },
+                    { "userProposingId", proposition.UserProposingId },
+                    { "propositionText", proposition.PropositionText },
+                    { "propositionSeen", proposition.PropositionSeen },
+                    { "propositionApproved", proposition.PropositionApproved },
+                    { "guildId", proposition.GuildId }
+                };
+                return toReturn;
         }
-        public Proposition(string propositionId, string userProposing, ulong  userProposingId, string propositionText) 
+        public Proposition(string propositionId, string userProposing, ulong  userProposingId, string propositionText,ulong guildId) 
         {
             Console.WriteLine("Creating proposition object");
-            this.propositionId = propositionId;
-            this.userProposing= userProposing;
-            this.userProposingId = userProposingId;
-            this.propositionText = propositionText;
-            this.propositionSeen = false;
-            this.propositionApproved = null;
+            this.PropositionId = propositionId;
+            this.UserProposing= userProposing;
+            this.UserProposingId = userProposingId;
+            this.PropositionText = propositionText;
+            this.PropositionSeen = false;
+            this.PropositionApproved = null;
+            this.GuildId = guildId;
         }
-
-        public Proposition(JObject proposition)
-        {
-            this.propositionId = proposition["propositionId"].ToString();
-            this.userProposing = proposition["userProposing"].ToString();
-            this.userProposingId = (ulong)proposition["userProposingId"];
-            this.propositionText = proposition["propositionText"].ToString();
-            this.propositionSeen = Convert.ToBoolean(proposition["propositionSeen"].ToString());
-            this.propositionApproved = Convert.ToBoolean(proposition["propositionApproved"].ToString());
-        }
-
-        public int CompareTo(Proposition other)
+        public int CompareTo(Proposition? other)
         {
             throw new NotImplementedException();
         }
 
         public class PropositionComparerApproval : IComparer<Proposition>
         {
-            public int Compare(Proposition x, Proposition y)
+            public int Compare(Proposition? x, Proposition? y)
             {
-                if (x.propositionApproved == true && y.PropositionApproved==true) { return 0; }
+                if(x==null || y == null) { return 0; }
+                if (x.PropositionApproved == true && y.PropositionApproved==true) { return 0; }
                 if (x.PropositionApproved == true && y.PropositionApproved == false) { return 1; }
                 return -1;
             }
@@ -105,13 +71,8 @@ namespace BOT1.commands
 
         public override string ToString()
         {
-            return this.userProposing + " proposed :\n" + this.propositionText;
+            return this.UserProposing + " proposed :\n" + this.PropositionText;
         }
-
-
-
-
-       
     }
 }
     
