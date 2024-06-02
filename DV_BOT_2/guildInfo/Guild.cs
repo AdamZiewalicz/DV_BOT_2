@@ -21,6 +21,8 @@ namespace DV_BOT_2.guildInfo
         }
         public bool RemoveFromPlaylist {  get; set; }
 
+        public float Volume = 1f;
+
         private bool trackLoopOn;
         public bool TrackLoopOn 
         { 
