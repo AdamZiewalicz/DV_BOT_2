@@ -46,15 +46,22 @@ namespace DV_BOT_2.commands
         private readonly IAudioService _audioService;
         private readonly Guilds _guilds;
         private readonly FakeYouNet.Client? _fakeYouClient;
-        public SlashCommands(IAudioService audioService, IServiceProvider _serviceProvider)
+        private readonly IServiceProvider _serviceProvider;
+        private readonly DiscordClient _discordClient;
+        public SlashCommands(IAudioService audioService, IServiceProvider serviceProvider)
         {
             ArgumentNullException.ThrowIfNull(audioService);
+            ArgumentNullException.ThrowIfNull(serviceProvider);
+            _serviceProvider = serviceProvider;
+            
+            var client = (DiscordClient?)_serviceProvider.GetService(typeof(DiscordClient));
+           
 
-            var discordClient = _serviceProvider.GetService(typeof(DiscordClient));
+            ArgumentNullException.ThrowIfNull(client);
 
-            ArgumentNullException.ThrowIfNull(discordClient);
+            _discordClient = client;
 
-            var guilds = ((DiscordClient)discordClient).Guilds;
+            var guilds = _discordClient.Guilds;
 
             _audioService = audioService;
             if (ApplicationHost._guilds ==null )
@@ -526,6 +533,106 @@ namespace DV_BOT_2.commands
             
         }
 
+        [SlashCommand("SetVolume","Set volume of currently playing track")]
+        public async Task SetVolume(InteractionContext ctx, [Option("Volume","Volume to set (%)")] double volumeToSet)
+        {
+            await ctx.DeferAsync().ConfigureAwait(false);
+
+            if(volumeToSet<0 || volumeToSet >100)
+            {
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Volume is outside of bounds (0 - 100)"));
+                return;
+            }
+
+            var player = await GetPlayerAsync(ctx,false).ConfigureAwait(false);
+
+            if (player != null)
+            {
+                await player.SetVolumeAsync((float)(volumeToSet / 100));
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Volume set to " + volumeToSet));
+                _guilds[ctx.Guild.Id].Volume = (float)volumeToSet / 100f;
+                return;
+            }
+
+            var connection = _discordClient
+                .GetVoiceNext()
+                .GetConnection(_discordClient.Guilds[ctx.Guild.Id]);
+
+            if(connection != null)
+            {   
+                connection.GetTransmitSink().VolumeModifier = volumeToSet / 100;
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Volume set to " + volumeToSet));
+                return;
+            }
+
+            await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("No player found in channel"));
+
+        }
+
+        [SlashCommand("NIGHTMARENIGHTMARENIGHTMARE","incoming")]
+        public async Task NightmareNightmareNightmare(InteractionContext ctx, [Option("user", "User to traumatize")] DiscordUser user)
+        {
+            await ctx.DeferAsync().ConfigureAwait(false);
+
+            var members = await ctx.Guild.GetAllMembersAsync();
+            
+            DiscordMember memberToMove = (DiscordMember)user;
+            
+            if(memberToMove.VoiceState == null)
+            {
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("User not connected"));
+                return;
+            }
+
+            var channelToMoveBackTo = memberToMove.VoiceState.Channel;
+
+            var nightmareChannel = await ctx.Guild.CreateChannelAsync("NIGHTMARENIGHTMARENIGHTMARE", ChannelType.Voice);
+
+            var retrieveOptions = new PlayerRetrieveOptions(ChannelBehavior: PlayerChannelBehavior.Join);
+
+            var playerOptions = new QueuedLavalinkPlayerOptions { HistoryCapacity = 10000 };
+
+            var player = (await _audioService.Players
+                .RetrieveAsync(ctx.Guild.Id, nightmareChannel.Id, playerFactory: PlayerFactory.Queued, Options.Create(playerOptions), retrieveOptions)
+                .ConfigureAwait(false)).Player;
+
+            var track = await _audioService.Tracks
+                   .LoadTrackAsync("https://www.youtube.com/watch?v=0QSAHS0sVhg", TrackSearchMode.YouTube)
+                   .ConfigureAwait(false);
+
+            if(track == null)
+            {
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Track not found"));
+                return;
+            }
+            if (player == null)
+            {
+                await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Player didn't connect"));
+                return;
+            }
+
+            await player.PlayAsync(track,enqueue:false);
+
+            await player.SetVolumeAsync(1);
+
+            await player.SeekAsync(TimeSpan.FromSeconds(5));
+
+            await memberToMove.PlaceInAsync(nightmareChannel);
+
+            await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Connected :)"));
+
+            while (player.State == PlayerState.Playing) 
+            {
+                Thread.Sleep(1000);
+            }
+
+            if(memberToMove.VoiceState != null)
+            {
+                await memberToMove.PlaceInAsync(channelToMoveBackTo);
+            }
+            await nightmareChannel.DeleteAsync();
+
+        }
 
         [SlashCommand("JumpToTimeInTrack","Jumps to timestamp in currently playing track")]
         public async Task JumpToTimeInTrack(InteractionContext ctx, [Option("Minutes","Minutes")] double minutes = 0, [Option("Seconds","Seconds")] double seconds = 0)

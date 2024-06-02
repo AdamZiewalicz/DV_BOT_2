@@ -71,6 +71,8 @@ namespace DV_BOT_2
             _discordClient
                 .UseSlashCommands(new SlashCommandsConfiguration { Services = _serviceProvider })
                 .RegisterCommands<SlashCommands>(1194760267075178657);
+            //   .RegisterCommands<SlashCommands>(1219385746415292527);
+            //.RegisterCommands<SlashCommands>(1194760267075178657);
 
             var prefixCommands = _discordClient.UseCommandsNext(commandsConfig);
 
@@ -92,6 +94,7 @@ namespace DV_BOT_2
             _discordClient.GuildAvailable += GetGuilds;
 
             _audioService.TrackEnded += TrackEndedHandler;
+            _audioService.TrackStarted += TrackStartedHandler;
 
             //loop app
             await Task
@@ -142,6 +145,14 @@ namespace DV_BOT_2
                     await args.Player.DisconnectAsync(stoppingToken);
                 }
                 return;
+            }
+            async Task TrackStartedHandler(object sender, TrackStartedEventArgs args)
+            {
+                if (_guilds != null)
+                {
+                    var p = (QueuedLavalinkPlayer)args.Player;
+                    await p.SetVolumeAsync(_guilds[args.Player.GuildId].Volume, stoppingToken);
+                }
             }
         }
     }
