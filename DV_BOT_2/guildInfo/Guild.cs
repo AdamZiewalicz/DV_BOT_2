@@ -4,12 +4,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace DV_BOT_2.guildInfo
 {
     public class Guild
     {
         public ulong GuildID {  get; set; }
+		
+		public List<Playlist> Playlists = new List<Playlist>();
 
         private LavalinkTrack? loopingTrack;
         public LavalinkTrack? LoopingTrack {
@@ -47,7 +51,18 @@ namespace DV_BOT_2.guildInfo
             LoopingTrack = null;
             PlaylistLoopOn = false;
             RemoveFromPlaylist = false;
-        }
+			var playlistsJSON = File.ReadAllText("guildInfo/playlists.json");
+			var guildsJARRAY = (JArray)JsonConvert.DeserializeObject(playlistsJSON);
+
+			foreach(var JGuild in guildsJARRAY)
+			{
+				if((ulong)JGuild["GuildID"] == guildID)
+				{
+					Console.WriteLine("Hi! Found playlists!");
+					break;
+				}
+			}
+		}
 
         public override string ToString()
         {
